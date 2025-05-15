@@ -8,6 +8,23 @@ variable "location" {
   type        = string
 }
 
+variable "tags" {
+  type        = map(string)
+  description = "Etiquetas globales para todos los recursos"
+}
+
+# Políticas
+variable "required_tag_name" {
+  type = string
+}
+variable "allowed_locations" {
+  type = list(string)
+}
+variable "location" {
+  description = "Primary location for all resources"
+  type        = string
+}
+
 variable "resourceGroupName" {
   type    = string
   default = ""
@@ -64,6 +81,15 @@ variable "enableSharePointConnector" {
   default = false
 }
 ////
+
+# SQL
+variable "db_admin_user"     { type = string }
+variable "db_admin_password" { type = string }
+variable "sql_sku"           { type = string }
+variable "db_collation"      { type = string }
+variable "db_max_size"       { type = number }
+variable "enable_zones"      { type = bool }
+variable "sql_subnet_id"     { type = string }
 
 //// Variables that can vary based on the Azure environment being targeted
 variable "azure_environment" {

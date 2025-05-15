@@ -165,36 +165,8 @@ resource "azurerm_resource_group_template_deployment" "container" {
   deployment_mode = "Incremental"
 }
 
-// Create a storage queue
-resource "azurerm_resource_group_template_deployment" "queue" {
-  depends_on          = [azurerm_storage_account.storage]
-  count               = length(var.queueNames)
-  resource_group_name = var.resourceGroupName
-  parameters_content = jsonencode({
-    "storageAccountName" = { value = "${azurerm_storage_account.storage.name}" },
-    "location"           = { value = var.location },
-    "queueName"          = { value = var.queueNames[count.index] }
-    "publicNetworkAccess" = { value = var.is_secure_mode ? "Disabled" : "Enabled" }
-  })
-  template_content = data.template_file.queue.template
-  # The filemd5 forces this to run when the file is changed
-  # this ensures the keys are up-to-date
-  name            = "${var.queueNames[count.index]}-${filemd5(local.queue_arm_file_path)}"
-  deployment_mode = "Incremental"
-}
 
-module "storage_connection_string" {
-  source                        = "../security/keyvaultSecret"
-  resourceGroupName             = var.resourceGroupName
-  arm_template_schema_mgmt_api  = var.arm_template_schema_mgmt_api
-  key_vault_name                = var.key_vault_name
-  secret_name                   = "AZURE-STORAGE-CONNECTION-STRING"
-  secret_value                  = azurerm_storage_account.storage.primary_connection_string
-  tags                          = var.tags
-  alias                         = "blobconnstring"
-  kv_secret_expiration          = var.kv_secret_expiration
-  contentType                   = "application/vnd.ms-StorageConnectionString"
-}
+
 
 data "azurerm_subnet" "subnet" {
   count                = var.is_secure_mode ? 1 : 0
@@ -292,13 +264,3 @@ resource "azurerm_private_endpoint" "queuePrivateEndpoint" {
   }
 }
 
-// Only create the config blob if we are not in secure mode as SharePoint integration is not supported in secure mode
-resource "azurerm_storage_blob" "config" {
-  depends_on = [ azurerm_resource_group_template_deployment.container ]
-  count                  = var.is_secure_mode ? 0 : 1
-  name                   = "config.json"
-  storage_account_name   = azurerm_storage_account.storage.name
-  storage_container_name = "config"
-  type                   = "Block"
-  source                 = "sp_config/config.json"
-}

@@ -19,7 +19,7 @@ resource "random_string" "random" {
 
 // Organize resources in a resource group
 resource "azurerm_resource_group" "rg" {
-  name     = var.resourceGroupName != "" ? var.resourceGroupName : "infoasst-${var.environmentName}"
+  name     = var.resourceGroupName != "" ? var.resourceGroupName : "${var.environmentName}"
   location = var.location
   tags     = local.tags
 }
@@ -37,6 +37,18 @@ module "entraObjects" {
   entraOwners                       = var.entraOwners
   serviceManagementReference        = var.serviceManagementReference
   password_lifetime                 = var.password_lifetime
+}
+
+module "policy" {
+  source = "./core/policy"
+
+  # Scope: puede ser subscription_id o rg_id
+  scope_subscription_id = data.azurerm_client_config.current.subscription_id
+  scope_rg_id           = var.resourceGroupName != "" ? var.resourceGroupName : "${var.environmentName}"
+
+  required_tag_name   = var.required_tag_name
+  allowed_locations   = var.allowed_locations
+  tags                = var.tags
 }
 
 // Create the Virtual Network, Subnets, and Network Security Group
@@ -218,6 +230,26 @@ module "logging" {
   vnet_id                               = var.is_secure_mode ? module.network[0].vnet_id : null
   nsg_id                                = var.is_secure_mode ? module.network[0].nsg_id : null
   nsg_name                              = var.is_secure_mode ? module.network[0].nsg_name : null
+}
+
+module "sql" {
+  source = "./core/db/sql"
+  db_admin_user = var.db_admin_user
+  db_admin_password = var.db_admin_password
+
+  sql_sku           = var.sql_sku
+  db_collation      = var.db_collation
+  db_max_size       = var.db_max_size
+  enable_zones      = var.enable_zones
+
+  subnet_id         = var.sql_subnet_id
+  tags              = var.tags
+  prefix            = "sql"
+  location          = azurerm_resource_group.rg.location
+  resource_group_id = var.resourceGroupName != "" ? var.resourceGroupName : var.environmentName
+
+
+ 
 }
 
 module "storage" {
